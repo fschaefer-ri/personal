@@ -4,9 +4,9 @@ import pandas as pd
 import numpy as np
 
 # datapath = "C:\\Users\\FredSchaefer\\OneDrive - CADEO GROUP, LLC\\Desktop\\PGE stuff\\BE update"
-
+state = 'OR'
 #%%
-url = 'https://oedi-data-lake.s3.amazonaws.com/nrel-pds-building-stock/end-use-load-profiles-for-us-building-stock/2024/resstock_tmy3_release_2/metadata_and_annual_results/by_state/state=OR/parquet/OR_baseline_metadata_and_annual_results.parquet'
+url = f'https://oedi-data-lake.s3.amazonaws.com/nrel-pds-building-stock/end-use-load-profiles-for-us-building-stock/2024/resstock_tmy3_release_2/metadata_and_annual_results/by_state/state={state}/parquet/{state}_baseline_metadata_and_annual_results.parquet'
 dfr = pd.read_parquet(url)
 dfr['heating_fuel'] = np.where(dfr['in.heating_fuel']=='Electricity','Elec','Non-Elec')
 dfr['wh_fuel'] = np.where(dfr['in.water_heater_fuel']=='Electricity','Elec','Non-Elec')
@@ -49,7 +49,7 @@ upgrades=[0,2,4,14]
 df_list = []
 for b in bldgs:
     for u in upgrades :
-        url = 'https://oedi-data-lake.s3.amazonaws.com/nrel-pds-building-stock/end-use-load-profiles-for-us-building-stock/2024/resstock_tmy3_release_2/timeseries_individual_buildings/by_state/upgrade='+str(u)+'/state=OR/'+str(b)+'-'+str(u)+'.parquet'
+        url = f'https://oedi-data-lake.s3.amazonaws.com/nrel-pds-building-stock/end-use-load-profiles-for-us-building-stock/2024/resstock_tmy3_release_2/timeseries_individual_buildings/by_state/upgrade={u}/state={state}/{b}-{u}.parquet'
         try: 
             tmp = pd.read_parquet(url)
             # tmp = tmp[['timestamp','out.electricity.cooling_fans_pumps.energy_consumption','out.electricity.cooling_fans_pumps.energy_consumption_intensity','out.electricity.cooling.energy_consumption','out.electricity.cooling.energy_consumption_intensity','out.electricity.heating_fans_pumps.energy_consumption','out.electricity.heating_fans_pumps.energy_consumption_intensity','out.electricity.heating_hp_bkup.energy_consumption','out.electricity.heating_hp_bkup.energy_consumption_intensity','out.electricity.heating.energy_consumption','out.electricity.heating.energy_consumption_intensity','out.electricity.pv.energy_consumption','out.electricity.pv.energy_consumption_intensity','out.electricity.net.energy_consumption','out.electricity.net.energy_consumption_intensity','out.electricity.total.energy_consumption','out.electricity.total.energy_consumption_intensity']]
