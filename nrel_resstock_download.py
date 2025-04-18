@@ -1,20 +1,13 @@
 #%% import packages
 
-# import boto3
 import pandas as pd
 import numpy as np
-# from botocore import UNSIGNED
-# from botocore.client import Config
-# import pyarrow.parquet as pq
-# from io import BytesIO
-# from io import StringIO
-# s3 = boto3.client('s3')
 
-datapath = "C:\\Users\\FredSchaefer\\OneDrive - CADEO GROUP, LLC\\Desktop\\PGE stuff\\BE update"
+# datapath = "C:\\Users\\FredSchaefer\\OneDrive - CADEO GROUP, LLC\\Desktop\\PGE stuff\\BE update"
 
-#%% read resstock metadata, filter to burlington
-dfr = pd.read_parquet(datapath+os.sep+"OR_baseline_metadata_and_annual_results.parquet")
-
+#%%
+url = 'https://oedi-data-lake.s3.amazonaws.com/nrel-pds-building-stock/end-use-load-profiles-for-us-building-stock/2024/resstock_tmy3_release_2/metadata_and_annual_results/by_state/state=OR/parquet/OR_baseline_metadata_and_annual_results.parquet'
+dfr = pd.read_parquet(url)
 dfr['heating_fuel'] = np.where(dfr['in.heating_fuel']=='Electricity','Elec','Non-Elec')
 dfr['wh_fuel'] = np.where(dfr['in.water_heater_fuel']=='Electricity','Elec','Non-Elec')
 dfr['has_cooling'] = np.where(dfr['in.hvac_cooling_type']=='None','N','Y')
@@ -29,24 +22,30 @@ dfr = dfr.reset_index()
 dfr = dfr[(dfr['in.weather_file_city'].isin(['Portland International Ap','Portland Hillsboro']))&(dfr['heating_fuel']=='Non-Elec')]
 dfr = dfr[['bldg_id','bldg_type','heating_fuel','wh_fuel','has_ducts','cooking_fuel','has_cooling']]
 
-
+#%%
 # Set up some stratifed sampling - focus on MF and SF, non-ducted 
 sf_df1 = dfr[(dfr['bldg_type'] == 'SF')&(dfr['has_ducts'] == 'N')]
 sf_df2 = dfr[(dfr['bldg_type'] == 'SF')&(dfr['has_ducts'] == 'Y')]
 mf_df = dfr[dfr['bldg_type'] == 'MF']
 
 # Then, we sample the desired number of rows from each
-sf1_sample = sf_df1.sample(n=40, random_state=421)  # Random state for reproducibility
-sf2_sample = sf_df2.sample(n=40, random_state=421)  # Random state for reproducibility
-mf_sample = mf_df.sample(n=80, random_state=421)
+sf1_sample = sf_df1.sample(n=10, random_state=421)  # Random state for reproducibility
+sf2_sample = sf_df2.sample(n=10, random_state=421)  # Random state for reproducibility
+mf_sample = mf_df.sample(n=10, random_state=421)
 
 # Combine the sampled dataframes
 dfr2 = pd.concat([sf1_sample, sf2_sample, mf_sample])
 dfr2
-#%%
+#%% for building electrification focus, focus on specific upgrade packages and on buildings that upgrade from non-electric fuel.
+# see https://oedi-data-lake.s3.amazonaws.com/nrel-pds-building-stock/end-use-load-profiles-for-us-building-stock/2024/resstock_tmy3_release_2/resstock_documentation_2024_release_2.pdf 
+# 0 = baseline
+# 2 = High efficiency cold-climate heat pump with elec backup
+# 4 = ENERGY STAR heat pump with existing system as backup
+# 14 = ENERGY STAR heat pump with existing system as backup + Light Touch Envelope + Full Appliance Electrification with Efficiency
 bldgs=list(dfr2['bldg_id'].values)
 upgrades=[0,2,4,14]
 
+# for each building in sample, download end-use interval data for each upgrade
 df_list = []
 for b in bldgs:
     for u in upgrades :
@@ -71,12 +70,12 @@ for b in bldgs:
 
 result_df = pd.concat(df_list)
 
-#%% Merge metadata with timseries
+#%% Merge metadata with timeseries
 result_df['timestamp'] = result_df['timestamp'] - pd.Timedelta(hours=1)
 result_df2 = pd.merge(left=dfr2, right=result_df, on='bldg_id', how='left')
 
 # write to CSV to take it the rest of the way in Excel
-result_df2.to_csv(datapath+os.sep+"resstock_timeseries_avg.csv", index=False)
+# result_df2.to_csv(datapath+os.sep+"resstock_timeseries_avg.csv", index=False)
 
 
 
